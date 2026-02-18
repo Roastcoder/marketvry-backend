@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../cors.php';
 try {
     $stmt = $conn->prepare("SELECT * FROM portfolio ORDER BY created_at DESC");
     $stmt->execute();

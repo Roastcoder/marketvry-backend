@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../cors.php';
 $data = json_decode(file_get_contents("php://input"));
 
 if (!isset($data->email) || !isset($data->password) || !isset($data->fullName)) {

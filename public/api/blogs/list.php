@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../cors.php';
 try {
     $stmt = $conn->prepare("SELECT id, title, excerpt, image_url, category, author, created_at FROM blogs ORDER BY created_at DESC");
     $stmt->execute();
