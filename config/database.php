@@ -7,10 +7,10 @@ class Database {
     public $conn;
 
     public function __construct() {
-        $this->host = $_ENV['DB_HOST'] ?? 'localhost';
-        $this->db_name = $_ENV['DB_NAME'] ?? 'marketvry';
-        $this->username = $_ENV['DB_USER'] ?? 'root';
-        $this->password = $_ENV['DB_PASS'] ?? 'YogiiXmarketvryXgovind';
+        $this->host = $_ENV['DB_HOST'] ?? '82.25.121.81';
+        $this->db_name = $_ENV['DB_NAME'] ?? 'u463483684_marketvry';
+        $this->username = $_ENV['DB_USER'] ?? 'u463483684_root';
+        $this->password = $_ENV['DB_PASS'] ?? 'YogiiXmarketvryXgovind1@';
     }
 
     public function connect() {
