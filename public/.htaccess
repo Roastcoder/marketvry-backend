@@ -1,6 +1,13 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
+    # Handle OPTIONS preflight
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L,E=HTTP_ORIGIN:%{HTTP:Origin}]
+    Header always set Access-Control-Allow-Origin "*" env=HTTP_ORIGIN
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    
     # Route API requests
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
@@ -8,12 +15,9 @@
 </IfModule>
 
 <IfModule mod_headers.c>
-    # CORS Headers
+    # CORS Headers for all responses
     Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
     Header always set Access-Control-Max-Age "86400"
 </IfModule>
-
-# Allow directory listing for testing (remove in production)
-Options +Indexes
