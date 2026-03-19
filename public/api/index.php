@@ -9,17 +9,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die();
 }
 
-require_once __DIR__ . '/../../config/database.php';
+// Resolve backend root for both local and deployed layouts
+$candidateRoots = [
+    realpath(__DIR__ . '/../../'),
+    realpath(__DIR__ . '/../'),
+    realpath(__DIR__ . '/../../../'),
+];
 
-$_ENV = parse_ini_file(__DIR__ . '/../../.env');
+$backendRoot = null;
+foreach ($candidateRoots as $root) {
+    if ($root && file_exists($root . '/config/database.php')) {
+        $backendRoot = $root;
+        break;
+    }
+}
+
+if (!$backendRoot) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Server configuration error']);
+    exit;
+}
+
+require_once $backendRoot . '/config/database.php';
+
+$envPath = $backendRoot . '/.env';
+$envData = file_exists($envPath) ? parse_ini_file($envPath) : [];
+if (!is_array($envData)) {
+    $envData = [];
+}
+$_ENV = array_merge($_ENV ?? [], $envData);
 
 $db = new Database();
 $conn = $db->connect();
+if (!$conn) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Database connection failed']);
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $path = str_replace('/api/index.php', '', $path);
 $path = str_replace('/api', '', $path);
+if ($path !== '/') {
+    $path = rtrim($path, '/');
+    if ($path === '') {
+        $path = '/';
+    }
+}
 
 // Auth endpoints
 if ($path === '/auth/login' && $method === 'POST') {

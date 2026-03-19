@@ -4,9 +4,6 @@ Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
 Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
 Header always set Access-Control-Max-Age "86400"
 
-# Disable trailing slash redirect
-DirectorySlash Off
-
 # Route API requests
 RewriteEngine On
 RewriteRule ^api/index\.php$ - [L]
