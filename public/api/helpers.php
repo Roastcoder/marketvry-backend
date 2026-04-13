@@ -1,8 +1,18 @@
 <?php
 function getAuthToken() {
     $headers = getallheaders();
+    $auth = '';
+    
     if (isset($headers['Authorization'])) {
-        return str_replace('Bearer ', '', $headers['Authorization']);
+        $auth = $headers['Authorization'];
+    } else if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['HTTP_AUTHORIZATION'];
+    } else if (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+
+    if (!empty($auth) && strpos($auth, 'Bearer ') === 0) {
+        return substr($auth, 7);
     }
     return null;
 }
