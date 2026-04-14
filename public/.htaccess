@@ -9,5 +9,6 @@ DirectorySlash Off
 
 # Route API requests
 RewriteEngine On
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 RewriteRule ^api/index\.php$ - [L]
 RewriteRule ^api(/.*)?$ api/index.php [L,QSA]

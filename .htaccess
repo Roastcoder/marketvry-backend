@@ -4,6 +4,7 @@
 
     # Route all API requests through the front controller before filesystem checks.
     # This avoids trailing-slash redirects when folder names collide with endpoints.
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
     RewriteRule ^api(/.*)?$ public/api/index.php [L,QSA]
 
     # Allow access to public directory
