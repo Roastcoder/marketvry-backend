@@ -1,17 +1,26 @@
 <?php
 function getAuthToken() {
-    $headers = getallheaders();
     $auth = '';
     
-    if (isset($headers['Authorization'])) {
-        $auth = $headers['Authorization'];
-    } else if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+    // 1. Try getallheaders() case-insensitively
+    if (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        foreach ($headers as $key => $value) {
+            if (strtolower($key) === 'authorization') {
+                $auth = $value;
+                break;
+            }
+        }
+    }
+    
+    // 2. Try $_SERVER variables
+    if (empty($auth) && isset($_SERVER['HTTP_AUTHORIZATION'])) {
         $auth = $_SERVER['HTTP_AUTHORIZATION'];
-    } else if (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+    } else if (empty($auth) && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
         $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
     }
 
-    if (!empty($auth) && strpos($auth, 'Bearer ') === 0) {
+    if (!empty($auth) && stripos($auth, 'Bearer ') === 0) {
         return substr($auth, 7);
     }
     return null;
