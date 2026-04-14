@@ -57,6 +57,7 @@ function createToken($userId, $email, $role) {
 function requireAuth() {
     $token = getAuthToken();
     if (!$token) {
+        error_log("Auth Failed: No token found. Headers: " . print_r(getallheaders(), true) . " SERVER: " . print_r($_SERVER, true));
         http_response_code(401);
         echo json_encode(['message' => 'Unauthorized']);
         exit();
@@ -64,6 +65,7 @@ function requireAuth() {
     
     $user = verifyToken($token);
     if (!$user) {
+        error_log("Auth Failed: Invalid token -> $token");
         http_response_code(401);
         echo json_encode(['message' => 'Invalid token']);
         exit();
