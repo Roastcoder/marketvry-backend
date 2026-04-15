@@ -10,4 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Hostinger Webhook
-        run: curl -X POST -H "Content-Type: application/json" -d '{}' https://webhooks.hostinger.com/deploy/9b901a711fe5e92eda1afe2388a3a15b
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: push" \
+            -H "User-Agent: GitHub-Hookshot" \
+            -d '{"ref": "refs/heads/main"}' \
+            https://webhooks.hostinger.com/deploy/9b901a711fe5e92eda1afe2388a3a15b
