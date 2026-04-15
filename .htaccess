@@ -4,6 +4,9 @@
 
     # Route all API requests through the front controller before filesystem checks.
     # This avoids trailing-slash redirects when folder names collide with endpoints.
+    CGIPassAuth On
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
     SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
     RewriteRule ^api(/.*)?$ public/api/index.php [L,QSA]
 
