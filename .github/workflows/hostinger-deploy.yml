@@ -1,0 +1,13 @@
+name: Auto Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Hostinger Webhook
+        run: curl -X POST -H "Content-Type: application/json" -d '{}' https://webhooks.hostinger.com/deploy/9b901a711fe5e92eda1afe2388a3a15b
