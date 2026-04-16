@@ -128,6 +128,10 @@ elseif ($path === '/admin/blogs/upload-image' && $method === 'POST') {
 // Portfolio endpoints
 elseif ($path === '/portfolio' && $method === 'GET') {
     require_once 'portfolio/list.php';
+}
+// Services endpoints
+elseif ($path === '/services' && $method === 'GET') {
+    require_once 'services/list.php';
 } elseif ($path === '/admin/portfolio' && $method === 'GET') {
     require_once 'admin/portfolio.php';
 } elseif ($path === '/admin/portfolio' && $method === 'POST') {
@@ -138,6 +142,24 @@ elseif ($path === '/portfolio' && $method === 'GET') {
 } elseif (preg_match('/^\/admin\/portfolio\/([^\/]+)$/', $path, $matches) && $method === 'DELETE') {
     $_GET['id'] = $matches[1];
     require_once 'admin/delete-portfolio.php';
+}
+// Services endpoints
+elseif ($path === '/admin/services' && $method === 'GET') {
+    require_once 'admin/services-list.php';
+} elseif ($path === '/admin/services' && $method === 'POST') {
+    require_once 'admin/create-service.php';
+} elseif (preg_match('/^\/admin\/services\/([^\/]+)$/', $path, $matches) && $method === 'PUT') {
+    $_GET['id'] = $matches[1];
+    require_once 'admin/update-service.php';
+} elseif (preg_match('/^\/admin\/services\/([^\/]+)$/', $path, $matches) && $method === 'DELETE') {
+    $_GET['id'] = $matches[1];
+    require_once 'admin/delete-service.php';
+}
+// Settings endpoints
+elseif ($path === '/admin/settings' && $method === 'GET') {
+    require_once 'admin/settings-get.php';
+} elseif ($path === '/admin/settings' && $method === 'PUT') {
+    require_once 'admin/settings-update.php';
 } else {
     http_response_code(404);
     echo json_encode(['message' => 'Route not found']);
