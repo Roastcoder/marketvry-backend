@@ -107,6 +107,20 @@ elseif ($path === '/reviews/next' && $method === 'GET') {
         http_response_code(500);
         echo json_encode(['message' => 'Failed to update review status: ' . $e->getMessage()]);
     }
+} elseif ($path === '/settings' && $method === 'GET') {
+    try {
+        $stmt = $conn->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('google_sheet_script_url')");
+        $stmt->execute();
+        $settingsRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $settings = [];
+        foreach ($settingsRaw as $row) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+        echo json_encode($settings);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to fetch settings: ' . $e->getMessage()]);
+    }
 }
 // Admin endpoints
 elseif ($path === '/admin/users' && $method === 'GET') {
