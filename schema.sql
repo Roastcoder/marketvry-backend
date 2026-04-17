@@ -53,6 +53,14 @@ CREATE TABLE IF NOT EXISTS blogs (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    review_text TEXT NOT NULL,
+    status ENUM('uploaded', 'non_uploaded') NOT NULL DEFAULT 'non_uploaded',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Insert default admin user (password: admin123)
 INSERT INTO users (email, password, full_name, role) VALUES 
 ('admin@marketvry.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin User', 'admin');

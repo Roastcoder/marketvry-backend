@@ -85,6 +85,13 @@ elseif ($path === '/blogs' && $method === 'GET') {
     $_GET['id'] = $matches[1];
     require_once 'blogs/detail.php';
 }
+// Public review endpoints
+elseif ($path === '/reviews/next' && $method === 'GET') {
+    require_once 'reviews/next.php';
+} elseif (preg_match('/^\/reviews\/([^\/]+)\/uploaded$/', $path, $matches) && ($method === 'PUT' || $method === 'POST')) {
+    $_GET['id'] = $matches[1];
+    require_once 'reviews/mark-uploaded.php';
+}
 // Admin endpoints
 elseif ($path === '/admin/users' && $method === 'GET') {
     require_once 'admin/users.php';
@@ -110,6 +117,16 @@ elseif ($path === '/admin/users' && $method === 'GET') {
 } elseif (preg_match('/^\/admin\/service-requests\/([^\/]+)$/', $path, $matches) && $method === 'DELETE') {
     $_GET['id'] = $matches[1];
     require_once 'admin/delete-service-request.php';
+} elseif ($path === '/admin/reviews' && $method === 'GET') {
+    require_once 'admin/reviews.php';
+} elseif ($path === '/admin/reviews' && $method === 'POST') {
+    require_once 'admin/create-review.php';
+} elseif (preg_match('/^\/admin\/reviews\/([^\/]+)$/', $path, $matches) && $method === 'PUT') {
+    $_GET['id'] = $matches[1];
+    require_once 'admin/update-review.php';
+} elseif (preg_match('/^\/admin\/reviews\/([^\/]+)$/', $path, $matches) && $method === 'DELETE') {
+    $_GET['id'] = $matches[1];
+    require_once 'admin/delete-review.php';
 }
 // Blog endpoints
 elseif ($path === '/admin/blogs/upload-image' && $method === 'POST') {

@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    review_text TEXT NOT NULL,
+    status ENUM('uploaded', 'non_uploaded') NOT NULL DEFAULT 'non_uploaded',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Default Settings
 INSERT IGNORE INTO settings (setting_key, setting_value) VALUES 
 ('site_name', 'Marketvry'),
