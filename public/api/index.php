@@ -31,6 +31,7 @@ if (!$backendRoot) {
 }
 
 require_once $backendRoot . '/config/database.php';
+require_once __DIR__ . '/helpers.php';
 
 $envPath = $backendRoot . '/.env';
 $envData = file_exists($envPath) ? parse_ini_file($envPath) : [];
@@ -87,10 +88,25 @@ elseif ($path === '/blogs' && $method === 'GET') {
 }
 // Public review endpoints
 elseif ($path === '/reviews/next' && $method === 'GET') {
-    require_once 'reviews/next.php';
+    try {
+        $stmt = $conn->prepare("SELECT id, review_text, status, created_at FROM reviews WHERE status = 'non_uploaded' ORDER BY created_at ASC LIMIT 1");
+        $stmt->execute();
+        $review = $stmt->fetch(PDO::FETCH_ASSOC);
+        echo json_encode($review ?: null);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to fetch review: ' . $e->getMessage()]);
+    }
 } elseif (preg_match('/^\/reviews\/([^\/]+)\/uploaded$/', $path, $matches) && ($method === 'PUT' || $method === 'POST')) {
-    $_GET['id'] = $matches[1];
-    require_once 'reviews/mark-uploaded.php';
+    try {
+        $id = $matches[1];
+        $stmt = $conn->prepare("UPDATE reviews SET status = 'uploaded' WHERE id = ?");
+        $stmt->execute([$id]);
+        echo json_encode(['message' => 'Review marked as uploaded']);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to update review status: ' . $e->getMessage()]);
+    }
 }
 // Admin endpoints
 elseif ($path === '/admin/users' && $method === 'GET') {
@@ -118,15 +134,73 @@ elseif ($path === '/admin/users' && $method === 'GET') {
     $_GET['id'] = $matches[1];
     require_once 'admin/delete-service-request.php';
 } elseif ($path === '/admin/reviews' && $method === 'GET') {
-    require_once 'admin/reviews.php';
+    $user = requireAdmin();
+    try {
+        $stmt = $conn->prepare("SELECT id, review_text, status, created_at, updated_at FROM reviews ORDER BY created_at DESC");
+        $stmt->execute();
+        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to load reviews: ' . $e->getMessage()]);
+    }
 } elseif ($path === '/admin/reviews' && $method === 'POST') {
-    require_once 'admin/create-review.php';
+    $user = requireAdmin();
+    try {
+        $data = json_decode(file_get_contents("php://input"));
+        $reviewText = trim($data->review_text ?? '');
+        $status = $data->status ?? 'non_uploaded';
+        if ($reviewText === '') {
+            http_response_code(400);
+            echo json_encode(['message' => 'Review text is required']);
+            exit();
+        }
+        if (!in_array($status, ['uploaded', 'non_uploaded'], true)) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Invalid status']);
+            exit();
+        }
+        $stmt = $conn->prepare("INSERT INTO reviews (review_text, status) VALUES (?, ?)");
+        $stmt->execute([$reviewText, $status]);
+        echo json_encode(['message' => 'Review created successfully', 'id' => $conn->lastInsertId()]);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to create review: ' . $e->getMessage()]);
+    }
 } elseif (preg_match('/^\/admin\/reviews\/([^\/]+)$/', $path, $matches) && $method === 'PUT') {
-    $_GET['id'] = $matches[1];
-    require_once 'admin/update-review.php';
+    $user = requireAdmin();
+    try {
+        $id = $matches[1];
+        $data = json_decode(file_get_contents("php://input"));
+        $reviewText = trim($data->review_text ?? '');
+        $status = $data->status ?? null;
+        if ($reviewText === '' || !$status) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Review text and status are required']);
+            exit();
+        }
+        if (!in_array($status, ['uploaded', 'non_uploaded'], true)) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Invalid status']);
+            exit();
+        }
+        $stmt = $conn->prepare("UPDATE reviews SET review_text = ?, status = ? WHERE id = ?");
+        $stmt->execute([$reviewText, $status, $id]);
+        echo json_encode(['message' => 'Review updated successfully']);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to update review: ' . $e->getMessage()]);
+    }
 } elseif (preg_match('/^\/admin\/reviews\/([^\/]+)$/', $path, $matches) && $method === 'DELETE') {
-    $_GET['id'] = $matches[1];
-    require_once 'admin/delete-review.php';
+    $user = requireAdmin();
+    try {
+        $id = $matches[1];
+        $stmt = $conn->prepare("DELETE FROM reviews WHERE id = ?");
+        $stmt->execute([$id]);
+        echo json_encode(['message' => 'Review deleted successfully']);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to delete review: ' . $e->getMessage()]);
+    }
 }
 // Blog endpoints
 elseif ($path === '/admin/blogs/upload-image' && $method === 'POST') {
