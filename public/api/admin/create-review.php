@@ -7,6 +7,7 @@ $data = json_decode(file_get_contents("php://input"));
 
 $reviewText = trim($data->review_text ?? '');
 $status = $data->status ?? 'non_uploaded';
+$sheetRow = isset($data->sheet_row) && $data->sheet_row !== '' ? (int)$data->sheet_row : null;
 
 if ($reviewText === '') {
     http_response_code(400);
@@ -20,9 +21,15 @@ if (!in_array($status, ['uploaded', 'non_uploaded'], true)) {
     exit();
 }
 
+if ($sheetRow !== null && $sheetRow < 1) {
+    http_response_code(400);
+    echo json_encode(['message' => 'Sheet row must be a positive integer']);
+    exit();
+}
+
 try {
-    $stmt = $conn->prepare("INSERT INTO reviews (review_text, status) VALUES (?, ?)");
-    $stmt->execute([$reviewText, $status]);
+    $stmt = $conn->prepare("INSERT INTO reviews (review_text, status, sheet_row) VALUES (?, ?, ?)");
+    $stmt->execute([$reviewText, $status, $sheetRow]);
 
     echo json_encode([
         'message' => 'Review created successfully',

@@ -89,7 +89,7 @@ elseif ($path === '/blogs' && $method === 'GET') {
 // Public review endpoints
 elseif ($path === '/reviews/next' && $method === 'GET') {
     try {
-        $stmt = $conn->prepare("SELECT id, review_text, status, created_at FROM reviews WHERE status = 'non_uploaded' ORDER BY created_at ASC LIMIT 1");
+        $stmt = $conn->prepare("SELECT id, review_text, status, sheet_row, created_at FROM reviews WHERE status = 'non_uploaded' ORDER BY created_at ASC LIMIT 1");
         $stmt->execute();
         $review = $stmt->fetch(PDO::FETCH_ASSOC);
         echo json_encode($review ?: null);
@@ -136,7 +136,7 @@ elseif ($path === '/admin/users' && $method === 'GET') {
 } elseif ($path === '/admin/reviews' && $method === 'GET') {
     $user = requireAdmin();
     try {
-        $stmt = $conn->prepare("SELECT id, review_text, status, created_at, updated_at FROM reviews ORDER BY created_at DESC");
+        $stmt = $conn->prepare("SELECT id, review_text, status, sheet_row, created_at, updated_at FROM reviews ORDER BY created_at DESC");
         $stmt->execute();
         echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
     } catch (Throwable $e) {
@@ -149,6 +149,7 @@ elseif ($path === '/admin/users' && $method === 'GET') {
         $data = json_decode(file_get_contents("php://input"));
         $reviewText = trim($data->review_text ?? '');
         $status = $data->status ?? 'non_uploaded';
+        $sheetRow = isset($data->sheet_row) && $data->sheet_row !== '' ? (int)$data->sheet_row : null;
         if ($reviewText === '') {
             http_response_code(400);
             echo json_encode(['message' => 'Review text is required']);
@@ -159,8 +160,13 @@ elseif ($path === '/admin/users' && $method === 'GET') {
             echo json_encode(['message' => 'Invalid status']);
             exit();
         }
-        $stmt = $conn->prepare("INSERT INTO reviews (review_text, status) VALUES (?, ?)");
-        $stmt->execute([$reviewText, $status]);
+        if ($sheetRow !== null && $sheetRow < 1) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Sheet row must be a positive integer']);
+            exit();
+        }
+        $stmt = $conn->prepare("INSERT INTO reviews (review_text, status, sheet_row) VALUES (?, ?, ?)");
+        $stmt->execute([$reviewText, $status, $sheetRow]);
         echo json_encode(['message' => 'Review created successfully', 'id' => $conn->lastInsertId()]);
     } catch (Throwable $e) {
         http_response_code(500);
@@ -173,6 +179,7 @@ elseif ($path === '/admin/users' && $method === 'GET') {
         $data = json_decode(file_get_contents("php://input"));
         $reviewText = trim($data->review_text ?? '');
         $status = $data->status ?? null;
+        $sheetRow = isset($data->sheet_row) && $data->sheet_row !== '' ? (int)$data->sheet_row : null;
         if ($reviewText === '' || !$status) {
             http_response_code(400);
             echo json_encode(['message' => 'Review text and status are required']);
@@ -183,8 +190,13 @@ elseif ($path === '/admin/users' && $method === 'GET') {
             echo json_encode(['message' => 'Invalid status']);
             exit();
         }
-        $stmt = $conn->prepare("UPDATE reviews SET review_text = ?, status = ? WHERE id = ?");
-        $stmt->execute([$reviewText, $status, $id]);
+        if ($sheetRow !== null && $sheetRow < 1) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Sheet row must be a positive integer']);
+            exit();
+        }
+        $stmt = $conn->prepare("UPDATE reviews SET review_text = ?, status = ?, sheet_row = ? WHERE id = ?");
+        $stmt->execute([$reviewText, $status, $sheetRow, $id]);
         echo json_encode(['message' => 'Review updated successfully']);
     } catch (Throwable $e) {
         http_response_code(500);
@@ -200,6 +212,92 @@ elseif ($path === '/admin/users' && $method === 'GET') {
     } catch (Throwable $e) {
         http_response_code(500);
         echo json_encode(['message' => 'Failed to delete review: ' . $e->getMessage()]);
+    }
+} elseif ($path === '/admin/reviews/sync-from-sheet' && $method === 'POST') {
+    $user = requireAdmin();
+    try {
+        $data = json_decode(file_get_contents("php://input"), true);
+        $sheetScriptUrl = trim($data['sheet_script_url'] ?? '');
+
+        if (!$sheetScriptUrl) {
+            http_response_code(400);
+            echo json_encode(['message' => 'sheet_script_url is required']);
+            exit();
+        }
+
+        // Validate it's a Google Apps Script URL
+        if (!str_contains($sheetScriptUrl, 'script.google.com')) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Invalid Google Apps Script URL']);
+            exit();
+        }
+
+        // Fetch list of reviews from the Google Apps Script
+        $listUrl = $sheetScriptUrl . (str_contains($sheetScriptUrl, '?') ? '&' : '?') . 'action=list';
+        $ctx = stream_context_create([
+            'http' => [
+                'method'          => 'GET',
+                'timeout'         => 15,
+                'ignore_errors'   => true,
+                'follow_location' => true,
+            ],
+            'ssl' => [
+                'verify_peer'      => false,
+                'verify_peer_name' => false,
+            ],
+        ]);
+
+        $raw = @file_get_contents($listUrl, false, $ctx);
+        if ($raw === false) {
+            http_response_code(502);
+            echo json_encode(['message' => 'Could not reach Google Apps Script. Check the URL and ensure the script is deployed as a web app with public access.']);
+            exit();
+        }
+
+        $rows = json_decode($raw, true);
+        if (!is_array($rows)) {
+            http_response_code(502);
+            echo json_encode(['message' => 'Google Apps Script did not return valid JSON. Make sure the script supports ?action=list and returns [{row, review_text, status},...].', 'raw' => substr($raw, 0, 500)]);
+            exit();
+        }
+
+        $imported = 0;
+        $skipped  = 0;
+
+        foreach ($rows as $row) {
+            $rowNum     = isset($row['row']) ? (int)$row['row'] : null;
+            $reviewText = trim($row['review_text'] ?? $row['text'] ?? $row['Review'] ?? '');
+            $statusRaw  = strtolower(trim($row['status'] ?? $row['Status'] ?? 'non_uploaded'));
+            $status     = in_array($statusRaw, ['uploaded'], true) ? 'uploaded' : 'non_uploaded';
+
+            if ($reviewText === '') {
+                $skipped++;
+                continue;
+            }
+
+            // Skip if a review with this sheet_row already exists
+            if ($rowNum !== null && $rowNum > 0) {
+                $check = $conn->prepare("SELECT id FROM reviews WHERE sheet_row = ? LIMIT 1");
+                $check->execute([$rowNum]);
+                if ($check->fetch()) {
+                    $skipped++;
+                    continue;
+                }
+            }
+
+            $stmt = $conn->prepare("INSERT INTO reviews (review_text, status, sheet_row) VALUES (?, ?, ?)");
+            $stmt->execute([$reviewText, $status, ($rowNum > 0 ? $rowNum : null)]);
+            $imported++;
+        }
+
+        echo json_encode([
+            'message'  => "Sync complete. Imported: {$imported}, Skipped (already exist or empty): {$skipped}.",
+            'imported' => $imported,
+            'skipped'  => $skipped,
+        ]);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Sync failed: ' . $e->getMessage()]);
     }
 }
 // Blog endpoints
