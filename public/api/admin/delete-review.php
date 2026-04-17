@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../helpers.php';
-require_once __DIR__ . '/../reviews/ensure-table.php';
 
 $user = requireAdmin();
 $id = $_GET['id'] ?? null;
@@ -13,7 +12,6 @@ if (!$id) {
 }
 
 try {
-    ensureReviewsTable($conn);
     $stmt = $conn->prepare("DELETE FROM reviews WHERE id = ?");
     $stmt->execute([$id]);
 

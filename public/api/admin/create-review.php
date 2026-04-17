@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../helpers.php';
-require_once __DIR__ . '/../reviews/ensure-table.php';
 
 $user = requireAdmin();
 $data = json_decode(file_get_contents("php://input"));
@@ -22,7 +21,6 @@ if (!in_array($status, ['uploaded', 'non_uploaded'], true)) {
 }
 
 try {
-    ensureReviewsTable($conn);
     $stmt = $conn->prepare("INSERT INTO reviews (review_text, status) VALUES (?, ?)");
     $stmt->execute([$reviewText, $status]);
 
