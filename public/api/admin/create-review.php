@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../helpers.php';
+require_once __DIR__ . '/../reviews/ensure-table.php';
 
 $user = requireAdmin();
 $data = json_decode(file_get_contents("php://input"));
@@ -20,10 +21,16 @@ if (!in_array($status, ['uploaded', 'non_uploaded'], true)) {
     exit();
 }
 
-$stmt = $conn->prepare("INSERT INTO reviews (review_text, status) VALUES (?, ?)");
-$stmt->execute([$reviewText, $status]);
+try {
+    ensureReviewsTable($conn);
+    $stmt = $conn->prepare("INSERT INTO reviews (review_text, status) VALUES (?, ?)");
+    $stmt->execute([$reviewText, $status]);
 
-echo json_encode([
-    'message' => 'Review created successfully',
-    'id' => $conn->lastInsertId()
-]);
+    echo json_encode([
+        'message' => 'Review created successfully',
+        'id' => $conn->lastInsertId()
+    ]);
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Failed to create review']);
+}

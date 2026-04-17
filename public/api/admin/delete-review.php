@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../helpers.php';
+require_once __DIR__ . '/../reviews/ensure-table.php';
 
 $user = requireAdmin();
 $id = $_GET['id'] ?? null;
@@ -11,7 +12,13 @@ if (!$id) {
     exit();
 }
 
-$stmt = $conn->prepare("DELETE FROM reviews WHERE id = ?");
-$stmt->execute([$id]);
+try {
+    ensureReviewsTable($conn);
+    $stmt = $conn->prepare("DELETE FROM reviews WHERE id = ?");
+    $stmt->execute([$id]);
 
-echo json_encode(['message' => 'Review deleted successfully']);
+    echo json_encode(['message' => 'Review deleted successfully']);
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Failed to delete review']);
+}
