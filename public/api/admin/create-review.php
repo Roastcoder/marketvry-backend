@@ -30,7 +30,7 @@ try {
         'message' => 'Review created successfully',
         'id' => $conn->lastInsertId()
     ]);
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['message' => 'Failed to create review']);
+    echo json_encode(['message' => $e->getMessage()]);
 }

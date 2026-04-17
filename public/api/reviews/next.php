@@ -14,7 +14,7 @@ try {
     }
 
     echo json_encode($review);
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['message' => 'Failed to fetch review']);
+    echo json_encode(['message' => $e->getMessage()]);
 }

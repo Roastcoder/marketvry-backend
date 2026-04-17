@@ -12,7 +12,7 @@ try {
     $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode($reviews);
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['message' => 'Failed to load reviews']);
+    echo json_encode(['message' => $e->getMessage()]);
 }
