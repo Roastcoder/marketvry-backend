@@ -363,7 +363,109 @@ elseif ($path === '/admin/settings' && $method === 'GET') {
     require_once 'admin/settings-get.php';
 } elseif ($path === '/admin/settings' && $method === 'PUT') {
     require_once 'admin/settings-update.php';
-} else {
+} 
+// FAQ endpoints
+elseif ($path === '/faqs' && $method === 'GET') {
+    try {
+        $stmt = $conn->prepare("SELECT * FROM faqs WHERE status = 'active' ORDER BY sort_order ASC, created_at DESC");
+        $stmt->execute();
+        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to load FAQs: ' . $e->getMessage()]);
+    }
+} elseif ($path === '/admin/faqs' && $method === 'GET') {
+    $user = requireAdmin();
+    require_once 'admin/faqs.php';
+} elseif ($path === '/admin/faqs' && $method === 'POST') {
+    $user = requireAdmin();
+    require_once 'admin/create-faq.php';
+} elseif (preg_match('/^\/admin\/faqs\/([^\/]+)$/', $path, $matches) && $method === 'PUT') {
+    $user = requireAdmin();
+    $_GET['id'] = $matches[1];
+    require_once 'admin/update-faq.php';
+} elseif (preg_match('/^\/admin\/faqs\/([^\/]+)$/', $path, $matches) && $method === 'DELETE') {
+    $user = requireAdmin();
+    $_GET['id'] = $matches[1];
+    require_once 'admin/delete-faq.php';
+}
+// Job/Careers endpoints
+elseif ($path === '/jobs' && $method === 'GET') {
+    try {
+        $stmt = $conn->prepare("SELECT * FROM jobs WHERE is_active = TRUE ORDER BY created_at DESC");
+        $stmt->execute();
+        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to load jobs: ' . $e->getMessage()]);
+    }
+} elseif ($path === '/admin/jobs' && $method === 'GET') {
+    $user = requireAdmin();
+    try {
+        $stmt = $conn->prepare("SELECT * FROM jobs ORDER BY created_at DESC");
+        $stmt->execute();
+        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to load jobs: ' . $e->getMessage()]);
+    }
+} elseif ($path === '/admin/jobs' && $method === 'POST') {
+    $user = requireAdmin();
+    try {
+        $data = json_decode(file_get_contents("php://input"));
+        $stmt = $conn->prepare("INSERT INTO jobs (title, department, location, type, experience, salary_range, description, requirements, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $data->title,
+            $data->department,
+            $data->location,
+            $data->type,
+            $data->experience,
+            $data->salary_range,
+            $data->description,
+            $data->requirements,
+            $data->is_active ?? 1
+        ]);
+        echo json_encode(['message' => 'Job created successfully', 'id' => $conn->lastInsertId()]);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to create job: ' . $e->getMessage()]);
+    }
+} elseif (preg_match('/^\/admin\/jobs\/([^\/]+)$/', $path, $matches) && $method === 'PUT') {
+    $user = requireAdmin();
+    try {
+        $id = $matches[1];
+        $data = json_decode(file_get_contents("php://input"));
+        $stmt = $conn->prepare("UPDATE jobs SET title = ?, department = ?, location = ?, type = ?, experience = ?, salary_range = ?, description = ?, requirements = ?, is_active = ? WHERE id = ?");
+        $stmt->execute([
+            $data->title,
+            $data->department,
+            $data->location,
+            $data->type,
+            $data->experience,
+            $data->salary_range,
+            $data->description,
+            $data->requirements,
+            $data->is_active,
+            $id
+        ]);
+        echo json_encode(['message' => 'Job updated successfully']);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to update job: ' . $e->getMessage()]);
+    }
+} elseif (preg_match('/^\/admin\/jobs\/([^\/]+)$/', $path, $matches) && $method === 'DELETE') {
+    $user = requireAdmin();
+    try {
+        $id = $matches[1];
+        $stmt = $conn->prepare("DELETE FROM jobs WHERE id = ?");
+        $stmt->execute([$id]);
+        echo json_encode(['message' => 'Job deleted successfully']);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to delete job: ' . $e->getMessage()]);
+    }
+}
+else {
     http_response_code(404);
     echo json_encode(['message' => 'Route not found']);
 }
